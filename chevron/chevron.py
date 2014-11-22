@@ -264,7 +264,7 @@ def render(template='', data={}, partials_path='.', partials_ext='mustache',
         # Otherwise make a generator
         tokens = tokenize(template, def_ldel, def_rdel)
 
-    output = unicode('', 'utf-8')
+    output = ['']
 
     if scopes is None:
         scopes = [data]
@@ -296,7 +296,7 @@ def render(template='', data={}, partials_path='.', partials_ext='mustache',
             # Add padding to the key and add it to the output
             if type(key) != unicode:
                 key = unicode(key, 'utf-8')
-            output += key.replace('\n', '\n' + (' ' * padding))
+            output.append(key.replace('\n', '\n' + (' ' * padding)))
 
         # If we're a variable tag
         elif tag == 'variable':
@@ -304,12 +304,12 @@ def render(template='', data={}, partials_path='.', partials_ext='mustache',
             thing = get_key(key)
             if type(thing) != unicode:
                 thing = unicode(str(thing), 'utf-8')
-            output += html_escape(thing)
+            output.append(html_escape(thing))
 
         # If we're a no html escape tag
         elif tag == 'no escape':
             # Just lookup the key and add it
-            output += str(get_key(key))
+            output.append(str(get_key(key)))
 
         # If we're a section tag
         elif tag == 'section':
@@ -331,11 +331,11 @@ def render(template='', data={}, partials_path='.', partials_ext='mustache',
                 for thing in scope:
                     # Append it as the most recent scope and render
                     new_scope = [thing] + scopes
-                    output += render(template=tags, scopes=new_scope,
+                    output.append(render(template=tags, scopes=new_scope,
                                      partials_path=partials_path,
                                      partials_ext=partials_ext,
                                      partials_dict=partials_dict,
-                                     def_ldel=def_ldel, def_rdel=def_rdel)
+                                     def_ldel=def_ldel, def_rdel=def_rdel))
 
             else:
                 # Otherwise we're just a scope section
@@ -353,7 +353,7 @@ def render(template='', data={}, partials_path='.', partials_ext='mustache',
             partial = get_partial(key)
 
             # Find how much to pad the partial
-            left = output.split('\n')[-1]
+            left = output[-1].split('\n')[-1]
             part_padding = padding
             if left.isspace():
                 part_padding += left.count(' ')
@@ -372,14 +372,14 @@ def render(template='', data={}, partials_path='.', partials_ext='mustache',
 
             # Add the partials output to the ouput
             if python3:
-                output += part_out
+                output.append(part_out)
             else:  # python 2
-                output += part_out.decode('utf-8')
+                output.append(part_out.decode('utf-8'))
 
     if python3:
-        return output
+        return ''.join(output)
     else:  # python 2
-        return output.encode('utf-8')
+        return ''.join(output).encode('utf-8')
 
 
 def main(template, data={}, **kwargs):
