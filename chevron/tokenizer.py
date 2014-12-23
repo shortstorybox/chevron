@@ -107,7 +107,7 @@ def parse_tag(template, l_del, r_del):
 # The main tokenizing function
 #
 
-def tokenize(template, def_ldel='{{', def_rdel='}}'):
+def tokenize(template, def_ldel='{{', def_rdel='}}', debugging=True):
     """Tokenize a mustache template
 
     Tokenizes a mustache template in a generator fashion,
@@ -146,77 +146,99 @@ def tokenize(template, def_ldel='{{', def_rdel='}}'):
 
     # If the template is a file-like object then read it
     try:
-        template = template.read()
+        org_template = template.read()
+        template = org_template
     except AttributeError:
-        pass
+        org_template = template
 
     is_standalone = True
     open_sections = []
     l_del = def_ldel
     r_del = def_rdel
+    error = None
 
-    while template:
-        literal, template = grab_literal(template, l_del)
+    try:
+        while template:
+            literal, template = grab_literal(template, l_del)
 
-        # If the template is completed
-        if not template:
-            # Then yield the literal and leave
-            yield ('literal', literal)
-            break
+            # If the template is completed
+            if not template:
+                # Then yield the literal and leave
+                yield ('literal', literal)
+                break
 
-        # Do the first check to see if we could be a standalone
-        is_standalone = l_sa_check(template, literal, is_standalone)
+            # Do the first check to see if we could be a standalone
+            is_standalone = l_sa_check(template, literal, is_standalone)
 
-        # Parse the tag
-        tag, template = parse_tag(template, l_del, r_del)
-        tag_type, tag_key = tag
+            # Parse the tag
+            tag, template = parse_tag(template, l_del, r_del)
+            tag_type, tag_key = tag
 
-        # Special tag logic
+            # Special tag logic
 
-        # If we are a set delimiter tag
-        if tag_type == 'set delimiter':
-            # Then get and set the delimiters
-            dels = tag_key.strip().split(' ')
-            l_del, r_del = dels[0], dels[-1]
+            # If we are a set delimiter tag
+            if tag_type == 'set delimiter':
+                # Then get and set the delimiters
+                dels = tag_key.strip().split(' ')
+                l_del, r_del = dels[0], dels[-1]
 
-        # If we are a section tag
-        elif tag_type in ['section', 'inverted section']:
-            # Then open a new section
-            open_sections.append(tag_key)
+            # If we are a section tag
+            elif tag_type in ['section', 'inverted section']:
+                # Then open a new section
+                open_sections.append(tag_key)
 
-        # If we are an end tag
-        elif tag_type == 'end':
-            # Then check to see if the last opened section
-            # is the same as us
-            last_section = open_sections.pop()
-            if tag_key != last_section:
-                # Otherwise we need to complain
-                raise SyntaxError('End tag does not match '
-                                  'the currently opened section')
+            # If we are an end tag
+            elif tag_type == 'end':
+                # Then check to see if the last opened section
+                # is the same as us
+                try:
+                    last_section = open_sections.pop()
+                except IndexError:
+                    # No open sections, we should complain
+                    raise SyntaxError('End tag without any currently '
+                                      'open tags')
 
-        # Do the second check to see if we're a standalone
-        is_standalone = r_sa_check(template, tag_type, is_standalone)
+                if tag_key != last_section:
+                    # Otherwise we need to complain
+                    raise SyntaxError('End tag does not match '
+                                      'the currently opened section')
 
-        # Which if we are
-        if is_standalone:
-            # Remove the stuff before the newline
-            template = template.split('\n', 1)[-1]
+            # Do the second check to see if we're a standalone
+            is_standalone = r_sa_check(template, tag_type, is_standalone)
 
-            # Partials need to keep the spaces on their left
-            if tag_type != 'partial':
-                # But other tags don't
-                literal = literal.rstrip(' ')
+            # Which if we are
+            if is_standalone:
+                # Remove the stuff before the newline
+                template = template.split('\n', 1)[-1]
 
-        # Start yielding
-        # Ignore literals that are empty
-        if literal != '':
-            yield ('literal', literal)
+                # Partials need to keep the spaces on their left
+                if tag_type != 'partial':
+                    # But other tags don't
+                    literal = literal.rstrip(' ')
 
-        # Ignore comments and set delimiters
-        if tag_type not in ['comment', 'set delimiter?']:
-            yield (tag_type, tag_key)
+            # Start yielding
+            # Ignore literals that are empty
+            if literal != '':
+                yield ('literal', literal)
 
-    # If there are any open sections when we're done
-    if open_sections:
-        # Then we need to complain
-        raise SyntaxError("End of file while a section was open")
+            # Ignore comments and set delimiters
+            if tag_type not in ['comment', 'set delimiter?']:
+                yield (tag_type, tag_key)
+
+        # If there are any open sections when we're done
+        if open_sections:
+            # Then we need to complain
+            raise SyntaxError("End of file while a section was open")
+
+    except SyntaxError as e:
+        if debugging:
+            try:
+                from debugger import debug
+                debug(org_template)
+            except ImportError:
+                error = e
+        else:
+            error = e
+
+    if error:
+        raise SyntaxError(error)

@@ -91,7 +91,7 @@ def _get_partial(name, partials_dict, partials_path, partials_ext):
 
 def render(template='', data={}, partials_path='.', partials_ext='mustache',
            partials_dict={}, padding=0, def_ldel='{{', def_rdel='}}',
-           scopes=None):
+           scopes=None, debugging=True):
     """Render a mustache template.
 
     Renders a mustache template with a data scope and partial capability.
@@ -147,7 +147,7 @@ def render(template='', data={}, partials_path='.', partials_ext='mustache',
         tokens = template
     else:
         # Otherwise make a generator
-        tokens = tokenize(template, def_ldel, def_rdel)
+        tokens = tokenize(template, def_ldel, def_rdel, debugging)
 
     output = unicode('', 'utf-8')
 
@@ -220,7 +220,8 @@ def render(template='', data={}, partials_path='.', partials_ext='mustache',
                                      partials_path=partials_path,
                                      partials_ext=partials_ext,
                                      partials_dict=partials_dict,
-                                     def_ldel=def_ldel, def_rdel=def_rdel)
+                                     def_ldel=def_ldel, def_rdel=def_rdel,
+                                     debugging=debugging)
 
             else:
                 # Otherwise we're just a scope section
@@ -249,7 +250,8 @@ def render(template='', data={}, partials_path='.', partials_ext='mustache',
                               partials_ext=partials_ext,
                               partials_dict=partials_dict,
                               def_ldel=def_ldel, def_rdel=def_rdel,
-                              padding=part_padding, scopes=scopes)
+                              padding=part_padding, scopes=scopes,
+                              debugging=debugging)
 
             # If the partial was indented
             if left.isspace():

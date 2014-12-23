@@ -53,11 +53,13 @@ class ExpandedCoverage(unittest.TestCase):
 
     def test_unclosed_sections(self):
         test1 = {
-            'template': '{{# section }} oops {{/ wrong_section }}'
+            'template': '{{# section }} oops {{/ wrong_section }}',
+            'debugging': False
         }
 
         test2 = {
-            'template': '{{# section }} end of file'
+            'template': '{{# section }} end of file',
+            'debugging': False
         }
 
         self.assertRaises(SyntaxError, chevron.render, **test1)
